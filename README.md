@@ -106,6 +106,6 @@ A single **Shipment Mode** filter slices all views, allowing operations managers
 
 Interested in discussing supply chain analytics or this project?
 
-- **LinkedIn:** [https://www.linkedin.com/in/vincent-tshidino-a828a0335](https://www.linkedin.com/in/vincent-tshidino-a828a0335)
+- **LinkedIn:** [https://www.linkedin.com/in/vhulenda-vincent-tshidino-a828a0335](https://www.linkedin.com/in/vhulenda-vincent-tshidino-a828a0335)
 - **Email:** vincentvee@yahoo.com
 - **GitHub:** [https://github.com/Vinny1221](https://github.com/Vinny1221)
