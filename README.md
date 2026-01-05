@@ -2,7 +2,7 @@
 
 **Role:** Supply Chain Data Analyst  
 **Tech Stack:** Python (Pandas), SQL Server, Tableau Public  
-**View the interactive dashboard on Tableau Public:** [Link to be added]
+**View the interactive dashboard on Tableau Public:** https://public.tableau.com/views/LogisticsSLARevenueRiskMonitor/LogisticsSLARevenueRiskMonitor
 
 ---
 
