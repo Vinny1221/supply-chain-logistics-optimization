@@ -1,101 +1,74 @@
--- SUPPLY CHAIN PERFORMANCE QUERIES
--- Author: Vincent Tshidino
--- Purpose: Analyze SLA breaches, financial impact of delays, warehouse performance, and high-risk SKUs.
--- Database: shipping
-
-USE shipping;  -- Change if your database name is different
+USE shipping;
 GO
 
----------------------------------------------------------------------
--- 1. SLA Breach Analysis by Warehouse
--- Objective: Calculate 'Late %' for each warehouse to identify bottlenecks against SLA targets.
----------------------------------------------------------------------
-SELECT 
-    [Warehouse Block],
-    COUNT(*) AS TotalOrders,
-    SUM(CASE WHEN [Delivery Status] = 'Late' THEN 1 ELSE 0 END) AS LateCount,
-    SUM(CASE WHEN [Delivery Status] = 'Late' THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS LatePct
-FROM 
-    shipping_data
-GROUP BY 
-    [Warehouse Block]
-ORDER BY 
-    LatePct DESC;
+/* 1. SLA Breach Analysis by Warehouse */
+SELECT
+    Warehouse_Block,
+    COUNT(*) AS Total_Orders,
+    SUM(CASE WHEN Delivery_Status = 'Late' THEN 1 ELSE 0 END) AS Late_Count,
+    (SUM(CASE WHEN Delivery_Status = 'Late' THEN 1 ELSE 0 END) * 100.0
+        / COUNT(*)) AS Late_Pct
+FROM dbo.cleaned_shipping_data
+GROUP BY Warehouse_Block
+ORDER BY Late_Pct DESC;
 GO
 
----------------------------------------------------------------------
--- 2. Financial Impact of Late Shipments
--- Objective: Quantify the revenue cost tied up in late deliveries.
----------------------------------------------------------------------
-SELECT 
-    [Warehouse Block],
-    COUNT(*) AS LateOrders,
-    SUM(CAST([Revenue Impact] AS FLOAT)) AS LateRevenueImpact
-FROM 
-    shipping_data
-WHERE 
-    [Delivery Status] = 'Late'
-GROUP BY 
-    [Warehouse Block]
-ORDER BY 
-    LateRevenueImpact DESC;
+/* 2. Financial Impact of Late Shipments (by Warehouse) */
+SELECT
+    Warehouse_Block,
+    COUNT(*) AS Late_Orders,
+    SUM(TRY_CAST(Revenue_Impact AS FLOAT)) AS Late_Revenue_Impact
+FROM dbo.cleaned_shipping_data
+WHERE Delivery_Status = 'Late'
+GROUP BY Warehouse_Block
+ORDER BY Late_Revenue_Impact DESC;
 GO
 
----------------------------------------------------------------------
--- 3. On-Time Performance by Region and Carrier
--- Objective: Compare SLA performance across regions and carriers.
----------------------------------------------------------------------
-SELECT 
-    [Order Region],
-    [Carrier Name],
-    COUNT(*) AS TotalOrders,
-    SUM(CASE WHEN [Delivery Status] = 'Late' THEN 1 ELSE 0 END) AS LateOrders,
-    SUM(CASE WHEN [Delivery Status] = 'Late' THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS LatePct
-FROM 
-    shipping_data
-GROUP BY 
-    [Order Region], [Carrier Name]
-HAVING 
-    COUNT(*) > 50
-ORDER BY 
-    LatePct DESC;
+/* 3. On-Time Performance by Shipment Mode */
+SELECT
+    Shipment_Mode,
+    COUNT(*) AS Total_Orders,
+    SUM(CASE WHEN Delivery_Status = 'Late' THEN 1 ELSE 0 END) AS Late_Orders,
+    (SUM(CASE WHEN Delivery_Status = 'Late' THEN 1 ELSE 0 END) * 100.0
+        / COUNT(*)) AS Late_Pct
+FROM dbo.cleaned_shipping_data
+GROUP BY Shipment_Mode
+ORDER BY Late_Pct DESC, Total_Orders DESC;
 GO
 
----------------------------------------------------------------------
--- 4. High-Risk SKUs: Fast-Moving but Frequently Late
--- Objective: Find products that sell frequently AND are often late.
----------------------------------------------------------------------
-SELECT 
-    [Product ID],
-    [Product Name],
-    [Category Name],
-    COUNT(*) AS TotalOrders,
-    SUM(CASE WHEN [Delivery Status] = 'Late' THEN 1 ELSE 0 END) AS LateOrders,
-    SUM(CASE WHEN [Delivery Status] = 'Late' THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS LatePct
-FROM 
-    shipping_data
-GROUP BY 
-    [Product ID], [Product Name], [Category Name]
-HAVING 
-    COUNT(*) > 30
-    AND SUM(CASE WHEN [Delivery Status] = 'Late' THEN 1 ELSE 0 END) * 100.0 / COUNT(*) > 20
-ORDER BY 
-    LatePct DESC;
+/* 4. High-Risk Customers: Frequent Purchases but Late Deliveries */
+SELECT
+    Customer_Rating,
+    SUM(TRY_CAST(Prior_Purchases AS INT)) AS Total_Prior_Purchases,
+    COUNT(*) AS Total_Orders,
+    SUM(CASE WHEN Delivery_Status = 'Late' THEN 1 ELSE 0 END) AS Late_Orders,
+    (SUM(CASE WHEN Delivery_Status = 'Late' THEN 1 ELSE 0 END) * 100.0
+        / COUNT(*)) AS Late_Pct
+FROM dbo.cleaned_shipping_data
+GROUP BY Customer_Rating
+HAVING COUNT(*) >= 30
+ORDER BY Late_Pct DESC, Total_Prior_Purchases DESC;
 GO
 
----------------------------------------------------------------------
--- 5. Shipment Mode Performance
--- Objective: Analyze late delivery rates by shipment mode.
----------------------------------------------------------------------
-SELECT 
-    [Shipment Mode],
-    COUNT(*) AS TotalOrders,
-    SUM(CASE WHEN [Delivery Status] = 'Late' THEN 1 ELSE 0 END) AS LateOrders,
-    SUM(CASE WHEN [Delivery Status] = 'Late' THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS LatePct
-FROM 
-    shipping_data
-GROUP BY 
-    [Shipment Mode]
-ORDER BY 
-    LatePct DESC;
+/* 5. Discount vs On-Time Delivery */
+SELECT
+    CASE
+        WHEN TRY_CAST(Discount_Offered AS INT) = 0 THEN '0'
+        WHEN TRY_CAST(Discount_Offered AS INT) BETWEEN 1 AND 20 THEN '1-20'
+        WHEN TRY_CAST(Discount_Offered AS INT) BETWEEN 21 AND 40 THEN '21-40'
+        ELSE '41+'
+    END AS Discount_Band,
+    COUNT(*) AS Total_Orders,
+    SUM(CASE WHEN Delivery_Status = 'Late' THEN 1 ELSE 0 END) AS Late_Orders,
+    (SUM(CASE WHEN Delivery_Status = 'Late' THEN 1 ELSE 0 END) * 100.0
+        / COUNT(*)) AS Late_Pct
+FROM dbo.cleaned_shipping_data
+GROUP BY
+    CASE
+        WHEN TRY_CAST(Discount_Offered AS INT) = 0 THEN '0'
+        WHEN TRY_CAST(Discount_Offered AS INT) BETWEEN 1 AND 20 THEN '1-20'
+        WHEN TRY_CAST(Discount_Offered AS INT) BETWEEN 21 AND 40 THEN '21-40'
+        ELSE '41+'
+    END
+ORDER BY Late_Pct DESC;
 GO
